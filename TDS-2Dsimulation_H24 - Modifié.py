@@ -45,6 +45,26 @@ r = 0.005
 cadre = curve(color=gray, radius=r)
 cadre.append([vector(-d,-d,0), vector(d,-d,0), vector(d,d,0), vector(-d,d,0), vector(-d,-d,0)])
 
+#CODE GENERE PAR CHAT GPT PAS TRES JOLI MAIS PEUT SERVIR DE BASE
+# Ajouter un maillage de sphères fixes
+Mesh = []
+mesh_radius = 0.05  # Rayon des sphères du maillage
+
+# Définir les positions du maillage
+num_mesh = 5
+mesh_spacing = L / (num_mesh + 1)
+for i in range(1, num_mesh + 1):
+    for j in range(1, num_mesh + 1):
+        mesh_pos = vector(i * mesh_spacing - L / 2, j * mesh_spacing - L / 2, 0)
+        Mesh.append(sphere(pos=mesh_pos, radius=mesh_radius, color=color.green))
+
+# Ajouter les sphères du maillage au scénario
+for mesh_sphere in Mesh:
+    mesh_sphere.visible = True
+
+
+
+
 #### POSITION ET QUANTITÉ DE MOUVEMENT INITIALE DES SPHÈRES ####
 Atoms = [] # Objet qui contiendra les sphères pour l'animation
 p = [] # quantité de mouvement des sphères
