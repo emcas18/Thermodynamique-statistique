@@ -147,3 +147,15 @@ while True:
         p[j] = pcomj+mass*Vcom
         apos[i] = posi+(p[i]/mass)*deltat # move forward deltat in time, ramenant au même temps où sont rendues les autres sphères dans l'itération
         apos[j] = posj+(p[j]/mass)*deltat
+
+#ATTENTION REPONSE QUESTION 4 PARTIE 1
+# Calcul du libre parcours moyen
+mean_free_path = np.mean(distances)
+
+# Calcul du temps de collision moyen
+mean_collision_time = np.mean(times)
+
+# Affichage des résultats
+print("Libre parcours moyen : ", mean_free_path)
+print("Temps de collision moyen : ", mean_collision_time)
+#FIN DE LA REPONSE QUESTION 4 PARTIE 1
