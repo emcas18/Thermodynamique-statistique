@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 # win = 500 # peut aider à définir la taille d'un autre objet visuel comme un histogramme proportionnellement à la taille du canevas.
 
 # Déclaration de variables influençant le temps d'exécution de la simulation
-Natoms = 3  # change this to have more or fewer atoms
+Natoms =   # change this to have more or fewer atoms
 dt = 1E-6  # pas d'incrémentation temporel
 
 # Déclaration de variables physiques "Typical values"
