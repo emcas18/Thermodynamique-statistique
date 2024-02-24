@@ -24,7 +24,7 @@ dt = 1E-5  # pas d'incrémentation temporel
 mass = 4E-3/6E23 # helium mass
 Ratom = 0.01 # wildly exaggerated size of an atom
 k = 1.4E-23 # Boltzmann constant
-T = 500 # around room temperature
+T = 300 # around room temperature
 
 #### CANEVAS DE FOND ####
 L = 1 # container is a cube L on a side
@@ -83,10 +83,14 @@ def checkCollisions():
 #### BOUCLE PRINCIPALE POUR L'ÉVOLUTION TEMPORELLE DE PAS dt ####
 ## ATTENTION : la boucle laisse aller l'animation aussi longtemps que souhaité, assurez-vous de savoir comment interrompre vous-même correctement (souvent `ctrl+c`, mais peut varier)
 ## ALTERNATIVE : vous pouvez bien sûr remplacer la boucle "while" par une boucle "for" avec un nombre d'itérations suffisant pour obtenir une bonne distribution statistique à l'équilibre
-
-for itr in range(2000):
+itr_collisions = []
+paire_collision = []
+qte_mvt = []
+valeurs_f = np.array([]).reshape(3, 0)
+for itr in range(20000):
+    p_iter = []
+    temps = itr*dt
     rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
-
     #### DÉPLACE TOUTES LES SPHÈRES D'UN PAS SPATIAL deltax
     vitesse = []   # vitesse instantanée de chaque sphère
     deltax = []  # pas de position de chaque sphère correspondant à l'incrément de temps dt
@@ -94,6 +98,8 @@ for itr in range(2000):
         vitesse.append(p[i]/mass)   # par définition de la quantité de nouvement pour chaque sphère
         deltax.append(vitesse[i] * dt)   # différence avant pour calculer l'incrément de position
         Atoms[i].pos = apos[i] = apos[i] + deltax[i]  # nouvelle position de l'atome après l'incrément de temps dt
+        p_iter.append(p[i])
+    qte_mvt.append(p_iter)
 
     #### CONSERVE LA QUANTITÉ DE MOUVEMENT AUX COLLISIONS AVEC LES PAROIS DE LA BOÎTE ####
     for i in range(Natoms):
@@ -107,6 +113,13 @@ for itr in range(2000):
 
     #### LET'S FIND THESE COLLISIONS!!! ####
     hitlist = checkCollisions()
+    if hitlist:
+        paire_collision.extend(hitlist) 
+    if hitlist:
+        # Parcours de chaque paire de collision dans la hitlist
+        for collision_pair in hitlist:
+            # Ajoute la valeur de itr au moment de la collision à la liste des itr_collisions
+            itr_collisions.append(itr)
 
     #### CONSERVE LA QUANTITÉ DE MOUVEMENT AUX COLLISIONS ENTRE SPHÈRES ####
     for ij in hitlist:
