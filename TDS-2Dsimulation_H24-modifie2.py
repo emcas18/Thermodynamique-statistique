@@ -9,203 +9,186 @@ Created on Fri Feb  5 15:40:27 2021
 # Claudine Allen
 """
 
+
 import matplotlib.pyplot as plt
 from vpython import *
-from scipy.stats import maxwell as maxwell
 import numpy as np
+from scipy.stats import maxwell as maxwell
 
-import math
-
-
-# win = 500 # peut aider à définir la taille d'un autre objet visuel comme un histogramme proportionnellement à la taille du canevas.
-
-# Déclaration de variables influençant le temps d'exécution de la simulation
-Natoms = 200                 # change this to have more or fewer atoms
-num_ions = 6                 # Nombre d'ions
-dt = 1E-7                    # Pas d'incrémentation temporelle
-blue = vector(0, 0, 1)
-
-# Déclaration de variables physiques "Typical values"
-mass = 9.10E-31    # Masse electron
-Ratom = 0.01    # Taille electron
-Rions = 0.03                # Taille des ions
-k = 1.4E-23    # Constante de Boltzmann
-T = 300                  # Température
+#Variables
+Natom = 200  # Change this to have more or fewer free electrons
+Nion = 36   # Nombre de coeurs
+dt = 1E-7    # pas d'incrémentation temporel
+mass = 9.1E-31 # Masse de electron
+Ratom = 0.01 # wildly exaggerated size of an electron
+Rion = 0.03 # Rayon des ions
+k = 1.4E-23   # Boltzmann constant
+T = 300     # around room temperature
 
 #### CANEVAS DE FOND ####
-L = 1 # container is a cube L on a side
+L = 1  # container is a cube L on a side
 gray = color.gray(0.7) # color of edges of container and spheres below
-animation = canvas( width=750, height=500) # , align='left')
+animation = canvas(width=750, height=500)
 animation.range = L
-# animation.title = 'Cinétique des gaz parfaits'
-# s = """  Simulation de particules modélisées en sphères dures pour représenter leur trajectoire ballistique avec collisions. Une sphère est colorée et grossie seulement pour l’effet visuel permettant de suivre sa trajectoire plus facilement dans l'animation, sa cinétique est identique à toutes les autres particules.
-
-# """
-# animation.caption = s
 
 #### ARÊTES DE BOÎTE 2D ####
 d = L/2+Ratom
 r = 0.005
 cadre = curve(color=gray, radius=r)
-cadre.append([vector(-d,-d,0), vector(d,-d,0), vector(d,d,0), vector(-d,d,0), vector(-d,-d,0)])
+cadre.append([vector(-d, -d, 0), vector(d, -d, 0), vector(d, d, 0), vector(-d, d, 0), vector(-d, -d, 0)])
 
 
-#### POSITION ET QUANTITÉ DE MOUVEMENT INITIALE DES SPHÈRES ####
-Atoms = [] # Objet qui contiendra les sphères pour l'animation
-p = [] # quantité de mouvement des sphères
-apos = [] # position des sphères
-pavg = sqrt(2*mass*1.5*k*T) #Principe de l'équipartition de l'énergie en thermodynamique statistique classique
+#### POSITION ET QUANTITÉ DE MOUVEMENT INITIALE DES ÉLECTRONS ####
+Atom = [] # objet qui contiendra les sphères d'électrons pour l'animation
+p = [] # quantité de mouvement des electrons
+apos = [] # position des electrons
+pavg = sqrt(2 * mass * 1.5 * k * T) #Principe de l'équipartition de l'énergie en thermodynamique statistique classique
 
-for i in range(Natoms):
-    x = L*random()-L/2 # position aléatoire qui tient compte que l'origine est au centre de la boîte
-    y = L*random()-L/2
-    z = 0
-    if i == 0:  # garde une sphère plus grosse et colorée parmis toutes les grises
-        Atoms.append(simple_sphere(pos=vector(x,y,z), radius=0.03, color=color.magenta))
-    else: Atoms.append(simple_sphere(pos=vector(x,y,z), radius=Ratom, color=gray))
-    apos.append(vec(x,y,z)) # liste de la position initiale de toutes les sphères
-#    theta = pi*random() # direction de coordonnées sphériques, superflue en 2D
-    phi = 2*pi*random() # direction aléatoire pour la quantité de mouvement
-    px = pavg*cos(phi)  # quantité de mvt initiale selon l'équipartition
-    py = pavg*sin(phi)
-    pz = 0
-    p.append(vector(px,py,pz)) # liste de la quantité de mvt initiale de toutes les sphères
+for i in range(Natom):
+    x = L * random() - L / 2 # position aléatoire qui tient compte que l'origine est au centre de la boîte
+    y = L * random() - L / 2
 
-#### POSITION DES IONS ET CREATION####
-ions = []
-ion_positions = []  # Liste pour stocker les vecteurs de positions des ions
-spacing = L / num_ions
+    Atom.append(simple_sphere(pos=vector(x, y, 0), radius=Ratom, color=gray))
+    apos.append(vec(x, y, 0))  # Liste de la position initiale des electrons
 
-for i in range(num_ions):
-    for j in range(num_ions):
-        x = -L / 2 + (i + 0.5) * spacing
-        y = -L / 2 + (j + 0.5) * spacing
-        z = 0
-        ions.append(simple_sphere(pos=vector(x,y,z), radius = Rions, color=blue))
-        ion_positions.append(vector(x, y, z))  # Création du vecteur de position de l'ion
+    phi = 2 * pi * random()  # Direction aléatoire pour la quantité de mouvement
+    px = pavg * cos(phi) # Quantité de mouvement initiale
+    py = pavg * sin(phi)
+    p.append(vector(px, py, 0))  # Liste de la quantité de mouvement initiale de toutes les sphères d'électrons
+    
+# CREATION COEURS IONIQUEs 
+x_ion, step_x = np.linspace(-d + 4 * Rion, d - 4 * Rion, int(np.sqrt(Nion)), retstep=True)
+y_ion = np.linspace(-d + 2 * Rion, d - 2 * Rion, int(np.sqrt(Nion)))
 
+ipos = []  # Liste des positions de tous les ions
 
-#### FONCTION POUR IDENTIFIER LES COLLISIONS ####
+# Nombre de lignes et de colonnes dans la grille
+num_rows = len(x_ion)
+num_cols = len(y_ion)
+
+# Espace entre chaque ion
+spacing_x = step_x / 2
+spacing_y = 2 * Rion
+
+for i in range(num_rows):
+    for j in range(num_cols):
+        # Position en x
+        x_pos = x_ion[i]
+
+        # Position en y
+        y_pos = y_ion[j]
+
+        # Créer la sphère à la position calculée
+        simple_sphere(pos=vector(x_pos, y_pos, 0), radius=Rion, color=color.blue)
+        ipos.append(vec(x_pos, y_pos, 0))
+
 def checkCollisions():
+    """
+    Fonction pour identifier les collisions entre les électrons et les ions.
+    :return:
+        hitlist (list) : Liste contenant une paire électron-ion qui ont subi une collision
+    """
     hitlist = []
 
-    r2 = (Ratom + Rions)
-    r2 *= r2  # produit scalaire pour éviter une comparaison vectorielle ci-dessous
+    # Distance critique où les 2 sphères entrent en contact à la limite de leur rayon
+    r2 = Ratom + Rion  # Distance critique où les 2 sphères (électron et ion) entrent en contact à la limite de leur rayon
+    r2 *= r2  # Produit scalaire pour éviter une comparaison vectorielle ci-dessous
 
-    for i in range(Natoms):
+    for i in range(Natom):
         ai = apos[i]
-        for j in range(num_ions**2):
-            ipos = ion_positions[j]
+        for j in range(Nion):
+            ionj = ipos[j]
 
-            # Calcul de la distace vectorielle un électron les ions
-            dr = ai - ipos
+            # Calcul de la distance vectorielle entre un électron et les ions
+            dr = ai - ionj
             if mag2(dr) < r2:
                 hitlist.append([i, j])
 
     return hitlist
-paire_collision = []
+
 #### BOUCLE PRINCIPALE POUR L'ÉVOLUTION TEMPORELLE DE PAS dt ####
-temps = 0
-p_atom = []  # Quantité de mouvement des atomes (électrons)
-p_moyen = []  # Quantité de mouvement moyenne
-temps_ecoule = []
-
+temps = 0   
+p_atom = [] #Qte mvt electron           
+p_moy = [] #Qte mvt moyenne pour tout les electron         
+temps_tot = [] #Temps total      
 for itr in range(20000):
-    rate(300)  # limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'oeil humain!
+    rate(300)  # Limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'œil humain!
+
     #### DÉPLACE TOUTES LES SPHÈRES D'UN PAS SPATIAL deltax
-    vitesse = []   # vitesse instantanée de chaque sphère
-    deltax = []  # pas de position de chaque sphère correspondant à l'incrément de temps dt
-    for i in range(Natoms):
-        vitesse.append(p[i]/mass)   # par définition de la quantité de nouvement pour chaque sphère
-        deltax.append(vitesse[i] * dt)   # différence avant pour calculer l'incrément de position
-        Atoms[i].pos = apos[i] = apos[i] + deltax[i]  # nouvelle position de l'atome après l'incrément de temps dt
-     #### CONSERVE LA QUANTITÉ DE MOUVEMENT AUX COLLISIONS AVEC LES PAROIS DE LA BOÎTE ####
-    for i in range(Natoms):
+    vitesse = []  # Vitesse instantanée de chaque électron
+    deltax = []  # Pas de position de chaque sphère correspondant à l'incrément de temps dt
+    for i in range(Natom):
+        vitesse.append(p[i] / mass)  # Par définition de la quantité de mouvement pour chaque électron
+        deltax.append(vitesse[i] * dt)  # Différence avant pour calculer l'incrément de position
+        apos[i] = apos[i] + deltax[i]
         loc = apos[i]
-        if abs(loc.x) > L/2:
-            if loc.x < 0: p[i].x =  abs(p[i].x)  # renverse composante x à la paroi de gauche
-            else: p[i].x =  -abs(p[i].x)   # renverse composante x à la paroi de droite
-        if abs(loc.y) > L/2:
-            if loc.y < 0: p[i].y = abs(p[i].y)  # renverse composante y à la paroi du bas
-            else: p[i].y =  -abs(p[i].y)  # renverse composante y à la paroi du haut
+        if abs(loc.x) > L / 2:
+            if loc.x < 0:
+                p[i].x = abs(p[i].x)  # Renverse la composante x au mur de gauche
+                apos[i].x = -(L / 2) - (apos[i].x + (L / 2))
+            else:
+                p[i].x = -abs(p[i].x)  # Renverse la composante x au mur de droite
+                apos[i].x = (L / 2) - (apos[i].x - (L / 2))
+        if abs(loc.y) > L / 2:
+            if loc.y < 0:
+                p[i].y = abs(p[i].y)  # Renverse la composante y au mur du bas
+                apos[i].y = -(L / 2) - (apos[i].y + (L / 2))
+            else:
+                p[i].y = -abs(p[i].y)  # Renverse la composante y au mur du haut
+                apos[i].y = (L / 2) - (apos[i].y - (L / 2))
+        Atom[i].pos = apos[i]  # Nouvelle position de l'atome après l'incrément de temps dt
 
-    #### IDENTIFICATION ET GESTION DES COLLISIONS ####
+    #### LET'S FIND THESE COLLISIONS!!! ####
     hitlist = checkCollisions()
-    if hitlist:
-        paire_collision.extend(hitlist)
-    for ij in hitlist:
-        posi = apos[i]              # position de l'électron
-        posj = ion_positions[j]              # position de l'ion
-        rrel = posi - posj 
-        vrel = -p[i]/mass
-        
-        if vrel.mag2 == 0: continue  
-        if rrel.mag > Rions + Ratom: continue
-            
-        dx = dot(rrel, vrel.hat)                # rrel.mag*cos(theta) où theta is the angle between vrel and rrel:
-        dy = cross(rrel, vrel.hat).mag          # rrel.mag*sin(theta)
-        alpha = asin(dy/(Rions + Ratom))  
-        d = d = (Rions + Ratom)*cos(alpha) - dx
-        deltat = d/vrel.mag 
-        #### CHANGE L'INTERPÉNÉTRATION DES SPHÈRES PAR LA CINÉTIQUE DE COLLISION ####
-        posi = posi + vrel * deltat  
 
-        # Calcul de la qte de mvt des électrons en collision
-        # selon le modèle de Drude
-        p_norm = mass * maxwell.rvs(scale=sqrt(k * T / mass))           
-        phi = 2 * pi * random()                                         
-        px = p_norm * cos(phi)                                        
+   # Boucle pour traiter les collisions identifiées dans hitlist
+    for ij in hitlist:
+        i = ij[0]               
+        j = ij[1]               
+        posi = apos[i]         
+        posj = ipos[j]         
+        rrel = posi - posj      
+        vrel = -p[i] / mass    
+
+    # Vérifier si la vitesse relative est nulle, si c'est le cas, passer à la prochaine collision
+        if vrel.mag2 == 0: continue
+
+    # Vérifier si la distance entre l'électron et l'ion est supérieure à la somme de leurs rayons, si c'est le cas, passer à la prochaine collision
+        if rrel.mag > Rion + Ratom: continue
+
+    # Calcul de la composante x du déplacement relatif entre l'électron et l'ion
+        dx = dot(rrel, vrel.hat)
+    # Calcul de la composante y du déplacement relatif entre l'électron et l'ion
+        dy = cross(rrel, vrel.hat).mag
+    # Calcul de l'angle alpha entre la composante y et la somme des rayons de l'électron et de l'ion
+        alpha = asin(dy / (Rion + Ratom))
+    # Calcul de la distance de chevauchement entre l'électron et l'ion
+        d = (Rion + Ratom) * cos(alpha) - dx
+    # Calcul du temps nécessaire pour atteindre le point de contact entre l'électron et l'ion
+        deltat = d / vrel.mag
+
+    # Mettre à jour la position de l'électron après la collision
+        posi = posi + vrel * deltat
+
+    # Générer une nouvelle quantité de mouvement pour l'électron après la collision
+        p_norm = mass * maxwell.rvs(scale=sqrt(k * T / mass))
+        phi = 2 * pi * random()
+        px = p_norm * cos(phi)
         py = p_norm * sin(phi)
         p[i] = vector(px, py, 0)
 
-        apos[i] = posi + (p[i]/mass)*deltat         
+    # Mettre à jour la position de l'électron après la collision et son nouveau déplacement
+        apos[i] = posi + (p[i] / mass) * deltat
 
-
-
-    T = np.mean([mag2(vec) for vec in p])/(2*k*mass)
+# Calcul de la température moyenne du système après les collisions
+    T = np.mean([mag2(vec) for vec in p]) / (3 * k * mass)
     temps += dt
 
-    temps_ecoule.append(temps)
-    p_atom.append((p[0].mag)) 
-    p_moyen.append(np.mean([mag(vec) for vec in p]))
+# Enregistrer le temps écoulé depuis le début de la simulation
+    temps_tot.append(temps)
 
-    #### CONSERVE LA QUANTITÉ DE MOUVEMENT AUX COLLISIONS ENTRE SPHÈRES ####
-    #for ij in hitlist:
-        
+# Enregistrer la norme de la quantité de mouvement du premier électron
+    p_atom.append(p[0].mag)
 
-        # définition de nouvelles variables pour chaque paire de sphères en collision
-        #i = ij[0]  # extraction du numéro des 2 sphères impliquées à cette itération
-        #j = ij[1]
-        #ptot = p[i]   # quantité de mouvement totale des 2 sphères
-        #mtot = masse_reduite    # masse totale des 2 sphères
-        ##Vcom = ptot/mtot   # vitesse du référentiel barycentrique/center-of-momentum (com) frame
-        ##posi = apos[i]   # position de chacune des 2 sphères
-        ##posj = apos[j]
-        ##vi = p[i]/mass   # vitesse de chacune des 2 sphères
-        ##vj = p[j]/mass
-        ##rrel = posi-posj  # vecteur pour la distance entre les centres des 2 sphères
-        ##vrel = vj-vi   # vecteur pour la différence de vitesse entre les 2 sphères
-
-        # exclusion de cas où il n'y a pas de changements à faire
-        ##if vrel.mag2 == 0: continue  # exactly same velocities si et seulement si le vecteur vrel devient nul, la trajectoire des 2 sphères continue alors côte à côte
-        ##if rrel.mag > Ratom: continue  # one atom went all the way through another, la collision a été "manquée" à l'intérieur du pas deltax
-
-        # calcule la distance et temps d'interpénétration des sphères dures qui ne doit pas se produire dans ce modèle
-        ##dx = dot(rrel, vrel.hat)       # rrel.mag*cos(theta) où theta is the angle between vrel and rrel:
-        ##dy = cross(rrel, vrel.hat).mag # rrel.mag*sin(theta)
-        ##alpha = asin(dy/(2*Ratom))  # alpha is the angle of the triangle composed of rrel, path of atom j, and a line from the center of atom i to the center of atom j where atome j hits atom i
-        ##d = (2*Ratom)*cos(alpha)-dx # distance traveled into the atom from first contact
-        ##deltat = d/vrel.mag         # time spent moving from first contact to position inside atom
-
-        #### CHANGE L'INTERPÉNÉTRATION DES SPHÈRES PAR LA CINÉTIQUE DE COLLISION ####
-        #posi = posi-vi*deltat   # back up to contact configuration
-        #posj = posj-vj*deltat
-        #pcomi = p[i]-mass*Vcom  # transform momenta to center-of-momentum (com) frame
-        #pcomj = p[j]-mass*Vcom
-        #rrel = hat(rrel)    # vecteur unitaire aligné avec rrel
-        #pcomi = pcomi-2*dot(pcomi,rrel)*rrel # bounce in center-of-momentum (com) frame
-        #pcomj = pcomj-2*dot(pcomj,rrel)*rrel
-        #p[i] = pcomi+mass*Vcom # transform momenta back to lab frame
-        #p[j] = pcomj+mass*Vcom
-        #apos[i] = posi+(p[i]/mass)*deltat # move forward deltat in time, ramenant au même temps où sont rendues les autres sphères dans l'itération
-        #apos[j] = posj+(p[j]/mass)*deltat
+# Enregistrer la quantité de mouvement moyenne de tous les électrons
+    p_moy.append(np.mean([mag(vec) for vec in p]))
