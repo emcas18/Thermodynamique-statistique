@@ -114,7 +114,6 @@ p_moy = [] #Qte mvt moyenne pour tout les electron
 temps_tot = [] #Temps total
 x_moy = []
 y_moy = [] 
-valeur_E = -10  
 for itr in range(20000):
     rate(300)  # Limite la vitesse de calcul de la simulation pour que l'animation soit visible à l'œil humain!
 
